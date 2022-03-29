@@ -185,19 +185,24 @@ Facter.add(:pe_status_check, type: :aggregate) do
   chunk(:S0022) do
     # Is there a valid license present, which does not expire in 90 days
     # Also takes into account if the license is perpetual
-    next unless PEStatusCheck.primary?
-    validity = true # true by default
-    if File.file?('/etc/puppetlabs/license.key')
-      license_type = File.readlines('/etc/puppetlabs/license.key').grep(%r{license_type:}).to_s
-      unless license_type.include? 'Perpetual'
-        require 'date'
-        start_date = Date.parse(File.readlines('/etc/puppetlabs/license.key').grep(%r{start:}).to_s)
-        end_date = Date.parse(File.readlines('/etc/puppetlabs/license.key').grep(%r{end:}).to_s)
+    license_file = '/etc/puppetlabs/license.key'
+    next unless PEStatusCheck.primary? && File.exist?(license_file)
+    license_type = File.readlines(license_file).grep(%r{license_type:}).to_s
+    if license_type.include? 'Perpetual'
+      validity = true
+    elsif license_type.include? 'Subscription'
+      require 'date'
+      begin
+        end_date = Date.parse(File.readlines(license_file).grep(%r{end:}).to_s)
         today_date = Date.today
         daysexp = (end_date - today_date).to_i
-        validity = (today_date >= start_date) && (today_date <= end_date) && (daysexp >= 90) ? true : false
+        validity = (today_date <= end_date) && (daysexp >= 90) ? true : false
+      rescue ArgumentError
+        # license file has missing or invalid end date
+        validity = false
       end
     else
+      # license file has missing or invalid license_type
       validity = false
     end
     { S0022: validity }
