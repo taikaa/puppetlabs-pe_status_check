@@ -195,6 +195,7 @@ Facter.add(:pe_status_check, type: :aggregate) do
         require 'date'
         begin
           end_date = Date.parse(File.readlines(license_file).grep(%r{end:}).to_s)
+          Facter.warn("string #{File.readlines(license_file).grep(%r{end:}).to_s}")
           Facter.warn("End date #{end_date}")
           today_date = Date.today
           daysexp = (end_date - today_date).to_i
