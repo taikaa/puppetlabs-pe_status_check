@@ -187,32 +187,36 @@ Facter.add(:pe_status_check, type: :aggregate) do
     # Also takes into account if the license is perpetual
     next unless PEStatusCheck.primary?
     license_file = '/etc/puppetlabs/license.key'
-    if File.exist?(license_file)
-      license_type = File.readlines(license_file).grep(%r{license_type:}).to_s
-      if license_type.include? 'Perpetual'
-        validity = true
-      elsif license_type.include? 'Subscription'
-        require 'date'
-        begin
-          end_date = Date.parse(File.readlines(license_file).grep(%r{end:}).to_s)
-          Facter.warn("string #{File.readlines(license_file).grep(%r{end:}).to_s}")
-          Facter.warn("End date #{end_date}")
-          today_date = Date.today
-          daysexp = (end_date - today_date).to_i
-          validity = (today_date <= end_date) && (daysexp >= 90) ? true : false
-        rescue StandardError => e
-          Facter.warn("Error in fact 'pe_status_check' when checking license end date: #{e.message}")
-          Facter.debug(e.backtrace)
-          # license file has missing or invalid end date
-          validity = false
+    validity = false
+    if File.exist?(license_file) 
+      license_type = File.readlines(license_file).grep(%r{license_type:}).first
+      begin
+        if license_type.include? 'Perpetual'
+          validity = true
+        elsif license_type.include? 'Subscription'
+          require 'date'
+          begin          
+            end_date = Date.parse(File.readlines(license_file).grep(%r{end:}).first)
+            today_date = Date.today
+            daysexp = (end_date - today_date).to_i
+            validity = (today_date <= end_date) && (daysexp >= 90) ? true : false
+          rescue StandardError => e
+            Facter.warn("Error in fact 'pe_status_check.S0022' when checking license end date: #{e.message}")
+            Facter.debug(e.backtrace)
+            # license file has missing or invalid end date
+            validity = false
+          end
+        #else
+          # license file invalid license_type
+          #validity = false
         end
-      else
-        # license file has missing or invalid license_type
-        validity = false
+      rescue StandardError => e
+        Facter.warn("Error in fact 'pe_status_check.S0022' when checking license type: #{e.message}")
+        #validity = false
       end
-    else
-      # license file doesn't exist
-      validity = false
+    #else
+      # license file doesn't exist 
+      #validity = false
     end
     { S0022: validity }
   end
