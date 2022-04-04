@@ -204,7 +204,7 @@ Facter.add(:pe_status_check, type: :aggregate) do
             Facter.warn("Error in fact 'pe_status_check.S0022' when checking license end date: #{e.message}")
             Facter.debug(e.backtrace)
             # license file has missing or invalid end date
-            validity = false
+            #validity = false
           end
         #else
           # license file invalid license_type
